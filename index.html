@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lift">
+<meta name="theme-color" content="#14171a">
+<title>Lift</title>
+<style>
+:root{--bg:#f3f4f6;--card:#fff;--ink:#16191d;--mute:#6b7280;--line:#e1e4e8;--acc:#1d6fd8;--acc-ink:#fff;--ok:#1f9d55;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#14171a;--card:#1d2126;--ink:#e9ecef;--mute:#8d96a0;--line:#2c323a;--acc:#4da3ff;--acc-ink:#0b1220;--ok:#43c37a;color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.4 -apple-system,"SF Pro Text",system-ui,Roboto,sans-serif;-webkit-text-size-adjust:100%}
+:root{padding-top:env(safe-area-inset-top,0px)}
+#app{max-width:640px;margin:0 auto;padding:12px 12px 150px}
+h1{font:700 26px/1.1 "Avenir Next Condensed","Arial Narrow",system-ui,sans-serif;letter-spacing:.2px;margin:6px 4px 12px}
+h2{font-size:17px;margin:0 0 6px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
+.mute{color:var(--mute);font-size:14px}
+button{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 13px;min-height:42px}
+button.p{background:var(--acc);color:var(--acc-ink);border-color:var(--acc);font-weight:600}
+button.d{color:#d64545}
+button.sm{min-height:34px;padding:5px 10px;font-size:14px}
+input,textarea,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:8px;width:100%;min-height:42px}
+textarea{min-height:110px;font-size:15px}
+.row{display:grid;grid-template-columns:24px 1fr 1fr 62px 42px 38px;gap:6px;align-items:center;margin:6px 0}
+.row .n{color:var(--mute);text-align:center;font-size:14px}
+.row input{text-align:center;padding:8px 2px}
+.hd{color:var(--mute);font-size:12px}
+.chk{padding:0;font-size:18px}
+.chk.on{background:var(--ok);border-color:var(--ok);color:#fff}
+.plt{padding:0;font-size:16px}
+.flex{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.flex>*{flex:1}
+.hint{font-size:14px;color:var(--acc);margin:2px 0 4px}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+nav button{flex:1;border:0;border-radius:0;background:none;color:var(--mute);min-height:54px;font-size:13px}
+nav button.on{color:var(--acc);font-weight:700}
+#tm{position:fixed;left:12px;right:12px;bottom:calc(66px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);border-radius:12px;padding:10px 14px;display:none;justify-content:space-between;align-items:center;z-index:6;font-weight:600}
+#tm button{min-height:32px;padding:3px 10px}
+.chips{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.pl{border-radius:50%;display:grid;place-items:center;font-weight:700;color:#fff;border:2px solid rgba(255,255,255,.35)}
+.big{font:700 34px/1 "Avenir Next Condensed","Arial Narrow",system-ui,sans-serif}
+.sess{border-top:1px solid var(--line);padding:8px 0}
+.sess:first-of-type{border-top:0}
+svg.sp{width:90px;height:26px;flex:0 0 90px}
+label{display:block;font-size:14px;color:var(--mute);margin:8px 0 3px}
+</style></head><body>
+<div id="app"><div id="v"></div></div>
+<div id="tm"><span id="tt"></span><button onclick="stopT()">Skip</button></div>
+<nav>
+<button data-t="w" onclick="go('w')">Workout</button>
+<button data-t="r" onclick="go('r')">Routines</button>
+<button data-t="h" onclick="go('h')">History</button>
+<button data-t="p" onclick="go('p')">Plates</button>
+<button data-t="s" onclick="go('s')">Settings</button>
+</nav>
+<script>
+const $=s=>document.querySelector(s),K='lift-v1';
+let S={};try{S=JSON.parse(localStorage.getItem(K))||{}}catch(e){}
+S=Object.assign({unit:'lb',bar:45,plates:[45,35,25,10,5,2.5],inc:5,rest:120,
+routines:[{id:1,name:'Upper A',ex:[{n:'Bench Press',sets:3,lo:6,hi:10},{n:'Barbell Row',sets:3,lo:8,hi:12},{n:'Overhead Press',sets:3,lo:8,hi:12}]},
+{id:2,name:'Lower A',ex:[{n:'Squat',sets:3,lo:5,hi:8},{n:'Romanian Deadlift',sets:3,lo:8,hi:12},{n:'Leg Curl',sets:3,lo:10,hi:15}]}],
+sessions:[],active:null},S);
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num=v=>{const x=parseFloat(v);return isNaN(x)?null:x};
+let tab='w',calc=135,tEnd=0,tI=null;
+const e1=(w,r)=>w*(1+r/30);
+const fmt=x=>Math.round(x*100)/100;
+
+/* ---------- progression ---------- */
+function last(n){for(let i=S.sessions.length-1;i>=0;i--){const e=S.sessions[i].ex.find(x=>x.n.toLowerCase()==n.toLowerCase());if(e&&e.sets.length)return e}return null}
+function sug(n,lo,hi){
+  const l=last(n);if(!l)return{w:'',r:lo,hint:'No history yet. Pick a weight you can do for '+lo+'–'+hi+' reps.'};
+  const top=Math.max(...l.sets.map(s=>s.w)),ws=l.sets.filter(s=>s.w==top);
+  const was=ws.map(s=>s.r).join(', ');
+  const rirs=ws.map(s=>s.rir).filter(x=>x!==null&&x!==undefined);
+  const easy=!rirs.length||rirs.reduce((a,b)=>a+b,0)/rirs.length>=1;
+  if(ws.every(s=>s.r>=hi)&&easy){const w=fmt(top+S.inc);return{w,r:lo,hint:'Last: '+top+'×'+was+'. Hit the top of the range, so add weight: '+w+'×'+lo+'.'}}
+  const r=Math.min(hi,Math.round(ws.reduce((a,s)=>a+s.r,0)/ws.length)+1);
+  return{w:top,r,hint:'Last: '+top+'×'+was+'. Aim for '+top+'×'+r+' on each set.'}
+}
+
+/* ---------- navigation ---------- */
+function go(t){tab=t;render()}
+function render(){
+  $('#v').innerHTML={w:vW,r:vR,h:vH,p:vP,s:vS}[tab]();
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t==tab));
+  if(tab=='p')showPl();
+}
+
+/* ---------- workout ---------- */
+function vW(){
+  const a=S.active;
+  if(!a)return `<h1>Workout</h1>
+  <div class="card"><h2>Start from a routine</h2>
+  ${S.routines.map(r=>`<button class="p" style="margin:4px 6px 4px 0" onclick="startW(${r.id})">${esc(r.name)}</button>`).join('')}
+  <button style="margin:4px 0" onclick="startW(0)">Empty workout</button></div>
+  <p class="mute" style="padding:0 4px">${S.sessions.length?'Last workout: '+esc(S.sessions[S.sessions.length-1].name)+' on '+S.sessions[S.sessions.length-1].date+'.':'Your logged workouts will show up under History.'}</p>`;
+  return `<h1>${esc(a.name)}</h1>`+a.ex.map((e,i)=>`<div class="card"><h2>${esc(e.n)}</h2>
+  <div class="mute">${e.lo}–${e.hi} reps</div><div class="hint">${esc(e.hint||'')}</div>
+  <div class="row hd"><span></span><span>${S.unit}</span><span>reps</span><span>RIR</span><span></span><span></span></div>
+  ${e.sets.map((s,j)=>`<div class="row"><span class="n">${j+1}</span>
+  <input type="number" inputmode="decimal" value="${s.w}" oninput="up(${i},${j},'w',this.value)">
+  <input type="number" inputmode="numeric" value="${s.r}" oninput="up(${i},${j},'r',this.value)">
+  <input type="number" inputmode="numeric" placeholder="–" value="${s.rir}" oninput="up(${i},${j},'rir',this.value)">
+  <button class="chk ${s.done?'on':''}" aria-label="Mark set done" onclick="tog(${i},${j})">✓</button>
+  <button class="plt" aria-label="Plate calculator" onclick="pl(${i},${j})">⚖</button></div>`).join('')}
+  <div class="flex" style="margin-top:8px"><button class="sm" onclick="addSet(${i})">Add set</button><button class="sm d" onclick="rmEx(${i})">Remove exercise</button></div></div>`).join('')+
+  `<div class="card"><div class="flex"><input id="ne" placeholder="Add exercise"><button class="p" style="flex:0 0 auto" onclick="addEx()">Add</button></div></div>
+  <div class="flex"><button class="p" onclick="finish()">Finish workout</button><button class="d" onclick="discard()">Discard</button></div>`;
+}
+function mkSets(n,sg){return Array.from({length:n},()=>({w:sg.w,r:sg.r,rir:'',done:false}))}
+function startW(id){
+  const r=S.routines.find(x=>x.id==id);
+  S.active={name:r?r.name:'Workout',ex:r?r.ex.map(e=>{const g=sug(e.n,e.lo,e.hi);return{n:e.n,lo:e.lo,hi:e.hi,hint:g.hint,sets:mkSets(e.sets,g)}}):[]};
+  save();render();
+}
+function up(i,j,k,v){S.active.ex[i].sets[j][k]=v;save()}
+function tog(i,j){const s=S.active.ex[i].sets[j];s.done=!s.done;save();if(s.done)startT(S.rest);render()}
+function addSet(i){const e=S.active.ex[i],l=e.sets[e.sets.length-1]||{w:'',r:e.lo};e.sets.push({w:l.w,r:l.r,rir:'',done:false});save();render()}
+function rmEx(i){S.active.ex.splice(i,1);save();render()}
+function addEx(){const n=$('#ne').value.trim();if(!n)return;const g=sug(n,8,12);S.active.ex.push({n,lo:8,hi:12,hint:g.hint,sets:mkSets(3,g)});save();render()}
+function discard(){if(confirm('Discard this workout?')){S.active=null;save();stopT();render()}}
+function finish(){
+  const ex=S.active.ex.map(e=>({n:e.n,sets:e.sets.filter(s=>s.done&&num(s.w)!==null&&num(s.r)!==null).map(s=>({w:num(s.w),r:num(s.r),rir:num(s.rir)}))})).filter(e=>e.sets.length);
+  if(!ex.length&&!confirm('No completed sets. Finish anyway?'))return;
+  if(ex.length)S.sessions.push({id:Date.now(),date:new Date().toLocaleDateString('en-CA'),name:S.active.name,ex});
+  S.active=null;save();stopT();tab='h';render();
+}
+
+/* ---------- rest timer ---------- */
+function startT(sec){tEnd=Date.now()+sec*1000;$('#tm').style.display='flex';clearInterval(tI);tI=setInterval(tick,250);tick()}
+function tick(){const l=Math.ceil((tEnd-Date.now())/1000);if(l<=0){$('#tt').textContent='Rest over. Next set.';clearInterval(tI);setTimeout(()=>{if(Date.now()>=tEnd)stopT()},6000);return}
+  $('#tt').textContent='Rest '+Math.floor(l/60)+':'+String(l%60).padStart(2,'0')}
+function stopT(){clearInterval(tI);$('#tm').style.display='none'}
+
+/* ---------- routines ---------- */
+const toTxt=r=>r.ex.map(e=>`${e.n}, ${e.sets}, ${e.lo}-${e.hi}`).join('\n');
+function vR(){return `<h1>Routines</h1>`+S.routines.map(r=>`<div class="card">
+  <input value="${esc(r.name)}" oninput="rn(${r.id},this.value)" aria-label="Routine name">
+  <label>One exercise per line: name, sets, rep range</label>
+  <textarea oninput="rx(${r.id},this.value)">${esc(toTxt(r))}</textarea>
+  <button class="sm d" style="margin-top:8px" onclick="rdel(${r.id})">Delete routine</button></div>`).join('')+
+  `<button class="p" onclick="radd()">New routine</button>`}
+function rn(id,v){S.routines.find(r=>r.id==id).name=v;save()}
+function rx(id,t){
+  S.routines.find(r=>r.id==id).ex=t.split('\n').map(l=>l.split(',').map(x=>x.trim())).filter(p=>p[0]).map(p=>{
+    const m=(p[2]||'8-12').match(/(\d+)\D+(\d+)/);return{n:p[0],sets:parseInt(p[1])||3,lo:m?+m[1]:8,hi:m?+m[2]:12}});save()}
+function radd(){S.routines.push({id:Date.now(),name:'New routine',ex:[{n:'Bench Press',sets:3,lo:8,hi:12}]});save();render()}
+function rdel(id){if(confirm('Delete this routine?')){S.routines=S.routines.filter(r=>r.id!=id);save();render()}}
+
+/* ---------- history / PRs ---------- */
+function spark(v){if(v.length<2)return'';const mn=Math.min(...v),mx=Math.max(...v),d=mx-mn||1;
+  return `<svg class="sp" viewBox="0 0 90 26"><polyline fill="none" stroke="var(--acc)" stroke-width="2" points="${v.map((y,i)=>(i*88/(v.length-1)+1)+','+(24-(y-mn)/d*22)).join(' ')}"/></svg>`}
+function vH(){
+  if(!S.sessions.length)return `<h1>History</h1><div class="card mute">No workouts yet. Finish one and it shows up here with your PRs.</div>`;
+  const names={};S.sessions.forEach(s=>s.ex.forEach(e=>{const b=Math.max(...e.sets.map(x=>e1(x.w,x.r)));(names[e.n]=names[e.n]||{h:[],best:null});names[e.n].h.push(b);
+    e.sets.forEach(x=>{if(!names[e.n].best||e1(x.w,x.r)>e1(names[e.n].best.w,names[e.n].best.r))names[e.n].best=x})}));
+  return `<h1>History</h1><div class="card"><h2>Personal records</h2><div class="mute">Best set by estimated 1-rep max</div>`+
+  Object.keys(names).map(n=>{const o=names[n];return `<div class="sess flex"><div style="flex:1"><b>${esc(n)}</b><div class="mute">${o.best.w}×${o.best.r} · e1RM ${Math.round(e1(o.best.w,o.best.r))} ${S.unit}</div></div>${spark(o.h)}</div>`}).join('')+`</div>`+
+  S.sessions.slice().reverse().map(s=>`<div class="card"><div class="flex"><div><b>${esc(s.name)}</b> <span class="mute">${s.date}</span></div><button class="sm d" style="flex:0 0 auto" onclick="sdel(${s.id})">Delete</button></div>`+
+  s.ex.map(e=>`<div class="sess"><b>${esc(e.n)}</b><div class="mute">${e.sets.map(x=>x.w+'×'+x.r+(x.rir!==null?' @'+x.rir:'')).join(', ')}</div></div>`).join('')+`</div>`).join('');
+}
+function sdel(id){if(confirm('Delete this workout?')){S.sessions=S.sessions.filter(s=>s.id!=id);save();render()}}
+
+/* ---------- plate calculator ---------- */
+function vP(){return `<h1>Plates</h1><div class="card"><label>Target weight (${S.unit})</label>
+  <input id="tw" type="number" inputmode="decimal" value="${calc}" oninput="calc=num(this.value)||0;showPl()">
+  <div class="flex" style="margin-top:8px">${(S.unit=='lb'?[135,185,225,315]:[60,80,100,140]).map(w=>`<button class="sm" onclick="calc=${w};$('#tw').value=${w};showPl()">${w}</button>`).join('')}</div>
+  <div id="pr"></div></div><p class="mute" style="padding:0 4px">Bar: ${S.bar} ${S.unit}. Change the bar and plate set in Settings.</p>`}
+const PC={45:'#1d5fb8',35:'#c9a400',25:'#2a8a4a',10:'#6b7280',5:'#c0392b',2.5:'#7a4fb5',1.25:'#555',20:'#1d5fb8',15:'#c9a400'};
+function showPl(){
+  const el=$('#pr');if(!el)return;const bar=S.bar;
+  if(calc<bar){el.innerHTML=`<p class="mute">Target is below the ${bar} ${S.unit} bar.</p>`;return}
+  let per=(calc-bar)/2;const out=[];
+  [...S.plates].sort((a,b)=>b-a).forEach(p=>{while(per>=p-1e-9){out.push(p);per=fmt(per-p)}});
+  const total=fmt(bar+2*out.reduce((a,b)=>a+b,0)),mx=Math.max(...S.plates,1);
+  el.innerHTML=`<div class="chips">${out.length?out.map(p=>`<div class="pl" style="background:${PC[p]||'#444'};width:${30+p/mx*26}px;height:${30+p/mx*26}px">${p}</div>`).join(''):'<span class="mute">Just the bar</span>'}</div>
+  <div class="mute">Per side, closest to the bar last</div>
+  <div class="big" style="margin-top:8px">${total} ${S.unit}</div>
+  ${total!=calc?`<div class="mute">Closest you can load with your plates, ${fmt(calc-total)} short.</div>`:''}`;
+}
+function pl(i,j){const w=num(S.active.ex[i].sets[j].w);if(w)calc=w;tab='p';render()}
+
+/* ---------- settings / backup ---------- */
+function vS(){return `<h1>Settings</h1><div class="card">
+  <label>Units</label><select onchange="setU(this.value)"><option ${S.unit=='lb'?'selected':''}>lb</option><option ${S.unit=='kg'?'selected':''}>kg</option></select>
+  <label>Bar weight</label><input type="number" inputmode="decimal" value="${S.bar}" oninput="S.bar=num(this.value)||0;save()">
+  <label>Plates available, per side (comma separated)</label><input value="${S.plates.join(', ')}" oninput="S.plates=this.value.split(',').map(num).filter(x=>x>0);save()">
+  <label>Weight added when you hit the top of the rep range</label><input type="number" inputmode="decimal" value="${S.inc}" oninput="S.inc=num(this.value)||0;save()">
+  <label>Rest timer (seconds)</label><input type="number" inputmode="numeric" value="${S.rest}" oninput="S.rest=num(this.value)||60;save()"></div>
+  <div class="card"><h2>Backup</h2><p class="mute">Your data lives in this browser only. Export a backup now and then, and use Import to move it to another device.</p>
+  <div class="flex"><button class="p" onclick="exp()">Export backup</button><button onclick="$('#imp').click()">Import backup</button></div>
+  <input id="imp" type="file" accept="application/json" style="display:none" onchange="imp(this)"></div>`}
+function setU(u){S.unit=u;if(u=='kg'){S.bar=20;S.plates=[25,20,15,10,5,2.5,1.25];S.inc=2.5}else{S.bar=45;S.plates=[45,35,25,10,5,2.5];S.inc=5}save();render()}
+function exp(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(S)],{type:'application/json'}));a.download='lift-backup-'+new Date().toLocaleDateString('en-CA')+'.json';a.click()}
+function imp(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.sessions)throw 0;if(confirm('Replace data on this device with the backup?')){S=Object.assign(S,d);save();render()}}catch(e){alert('That file is not a valid Lift backup.')}};r.readAsText(f)}
+
+render();
+if(S.active)render();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script></body></html>
